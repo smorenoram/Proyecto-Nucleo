@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SGAH Web — Sistema de Asignación Asistida de Horarios (Universidad El Bosque)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+    <!-- =====================================================================
+         PANTALLA 0: PORTAL DE INICIO DE SESIÓN INSTITUCIONAL (RNF-04)
+         ===================================================================== -->
+    <div id="login-screen" class="login-overlay">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo-ueb login-logo">
+                    <span class="logo-img" role="img" aria-label="Logo Universidad El Bosque"></span>
+                    <div class="logo-text"><b>UNIVERSIDAD</b><span>EL BOSQUE</span></div>
+                </div>
+                <span class="login-badge">FACULTAD DE INGENIERÍA · INGENIERÍA DE SISTEMAS</span>
+                <h1>Portal SGAH · Asignación Asistida de Horarios</h1>
+                <p>Autenticación y Control de Acceso Basado en Roles </p>
+            </div>
+
+            <form id="login-form" class="login-form">
+                <div class="form-group">
+                    <label for="login-rol">1. Seleccione su Rol Institucional</label>
+                    <select id="login-rol">
+                        <option value="COORDINADOR">Director de Programa / Comité Táctico </option>
+                        <option value="DOCENTE">Profesor / Cuerpo Docente </option>
+                        <option value="ESTUDIANTE">Estudiante de Pregrado</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="login-user">2. Correo Institucional Registrado en SQLite</label>
+                    <input type="text" id="login-user" class="login-input" value="director@unbosque.edu.co" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="login-pass">3. Contraseña de Acceso</label>
+                    <input type="password" id="login-pass" class="login-input" value="Director2026*" required />
+                </div>
+
+                <div id="login-error-msg" class="alert-amber hidden" style="background:#fff0f3;border-left-color:#c9184a;color:#881337;margin-bottom:10px;">
+                </div>
+
+                <button type="submit" class="btn btn-primary full-width login-submit">
+                    Verificar Credenciales e Iniciar Sesión
+                </button>
+            </form>
+
+            <div class="login-quick-access">
+                <span>Credenciales Oficiales en Base de Datos (Clic para autocompletar y entrar):</span>
+                <div class="quick-role-btns">
+                    <button type="button" class="chip-role" data-role="COORDINADOR" data-email="director@unbosque.edu.co" data-pass="Director2026*">
+                        👨‍💼 Director (director@unbosque.edu.co)
+                    </button>
+                    <button type="button" class="chip-role" data-role="DOCENTE" data-email="emorales@unbosque.edu.co" data-pass="Docente2026*">
+                        👨‍🏫 Profesora (emorales@unbosque.edu.co)
+                    </button>
+                    <button type="button" class="chip-role chip-role-student" data-role="ESTUDIANTE" data-email="dquijanoa@unbosque.edu.co" data-pass="Estudiante2026*">
+                        🎓 Estudiante (dquijanoa@unbosque.edu.co)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         APLICACIÓN PRINCIPAL (DIVIDIDA EN SIDEBAR + VISTAS POR ROL)
+         ===================================================================== -->
+    <div id="app-shell" class="app-shell hidden">
+        <header class="topbar">
+            <div class="topbar-brand">
+                <div class="logo-ueb" title="Universidad El Bosque">
+                    <span class="logo-img" role="img" aria-label="Logo Universidad El Bosque"></span>
+                    <div class="logo-text"><b>UNIVERSIDAD</b><span>EL BOSQUE</span></div>
+                </div>
+                <div class="topbar-titles">
+                    <h1>SGAH · Asignación Asistida de Horarios</h1>
+                    <p>Ingeniería de Sistemas · Proyecto Núcleo 2 · Arquitectura en Capas + Strategy + SQLite 3FN</p>
+                </div>
+            </div>
+
+            <div class="topbar-right">
+                <div class="topbar-stats" id="stats-bar">
+                    <div class="stat-pill"><span>Docentes</span><strong id="stat-docentes">12</strong></div>
+                    <div class="stat-pill"><span>Aulas</span><strong id="stat-aulas">6</strong></div>
+                    <div class="stat-pill"><span>Grupos</span><strong id="stat-grupos">20</strong></div>
+                    <div class="stat-pill stat-pill-highlight"><span>Sesiones Activas</span><strong id="stat-activas">0</strong></div>
+                </div>
+
+                <div class="user-session-box">
+                    <div class="user-meta">
+                        <strong id="session-user-name">Comité Táctico</strong>
+                        <span id="session-user-role" class="role-badge">ADMINISTRADOR</span>
+                    </div>
+                    <button id="btn-logout" class="btn-logout" title="Cerrar Sesión / Cambiar de Rol">Cambiar Rol / Salir</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="app-layout">
+            <!-- BARRA LATERAL DE NAVEGACIÓN POR MÓDULOS -->
+            <aside class="sidebar">
+                <div class="sidebar-section-title">MENÚ DE MÓDULOS</div>
+                <nav class="sidebar-nav">
+                    <button id="nav-btn-programacion" class="nav-item active" data-target="vista-programacion">
+                        <span class="nav-num">01</span>
+                        <div class="nav-text">
+                            <strong id="nav-title-01">Programación y Grilla</strong>
+                            <small id="nav-sub-01">Asignación asistida y Drag & Drop</small>
+                        </div>
+                    </button>
+
+                    <button id="nav-btn-sesiones" class="nav-item" data-target="vista-sesiones">
+                        <span class="nav-num">02</span>
+                        <div class="nav-text">
+                            <strong>Horario Detallado</strong>
+                            <small>Sesiones aprobadas y Exportar CSV</small>
+                        </div>
+                    </button>
+
+                    <button id="nav-btn-catalogos" class="nav-item" data-target="vista-catalogos">
+                        <span class="nav-num">03</span>
+                        <div class="nav-text">
+                            <strong id="nav-title-03">Catálogos y Matrícula</strong>
+                            <small id="nav-sub-03">Añadir estudiantes, Docentes y Aulas</small>
+                        </div>
+                    </button>
+
+                    <button id="nav-btn-auditoria" class="nav-item" data-target="vista-auditoria">
+                        <span class="nav-num">04</span>
+                        <div class="nav-text">
+                            <strong>Auditoría QA y Consola</strong>
+                            <small>Pruebas CP-01..08 y Estrés (200)</small>
+                        </div>
+                    </button>
+                </nav>
+
+                <!-- Acciones exclusivas de Administrador / Auditor -->
+                <div id="sidebar-admin-actions" class="sidebar-quick-actions">
+                    <div class="sidebar-section-title">ACCIONES RÁPIDAS DE DEMO</div>
+                    <button id="btn-demo" class="btn btn-danger-outline full-width">
+                        ⚡ Cargar Base + Forzar Choque
+                    </button>
+                    <button id="btn-qa-sidebar" class="btn btn-secondary full-width" style="margin-top:8px;">
+                        🧪 Ejecutar Suite QA + Estrés
+                    </button>
+                    <div class="btn-row" style="margin-top:8px; gap:8px;">
+                        <a href="/api/exportar-csv" class="btn btn-info" style="font-size:0.78rem; padding:8px;">📄 Exportar CSV</a>
+                        <button id="btn-reiniciar-sidebar" class="btn btn-muted" style="font-size:0.78rem; padding:8px;">🗑 Reiniciar BD</button>
+                    </div>
+                </div>
+
+                <!-- Aviso de modo solo lectura para Estudiantes / Docentes -->
+                <div id="sidebar-readonly-notice" class="readonly-notice hidden">
+                    <strong>Modo de Acceso:</strong>
+                    <span id="readonly-role-label">CONSULTA</span>
+                    <a href="/api/exportar-csv" class="btn btn-info full-width" style="margin-top:10px; font-size:0.8rem;">📄 Descargar Mi Horario</a>
+                </div>
+
+                <!-- Notificador flotante de última acción -->
+                <div id="status-toast" class="status-toast">
+                    <strong>Estado del Sistema:</strong>
+                    <p id="status-toast-text">Listo para operar.</p>
+                </div>
+            </aside>
+
+            <!-- CONTENEDOR DE VISTAS INDEPENDIENTES -->
+            <div class="view-container">
+
+                <!-- =========================================================
+                     VISTA 1: PROGRAMACIÓN Y GRILLA SEMANAL INTERACTIVA
+                     ========================================================= -->
+                <section id="vista-programacion" class="app-view active-view">
+                    <!-- Banner superior exclusivo cuando entra un Estudiante o Docente -->
+                    <div id="student-welcome-banner" class="student-banner hidden">
+                        <div>
+                            <span class="step-tag">PORTAL ESTUDIANTIL / CONSULTA PÚBLICA (RNF-04)</span>
+                            <h3>Visualización Oficial de Horarios de Clase Semestrales</h3>
+                            <p>Utilice el filtro superior derecho de la grilla para consultar las clases por <strong>Semestre</strong>, <strong>Grupo/Asignatura</strong>, <strong>Docente</strong> o <strong>Aula</strong>.</p>
+                        </div>
+                        <a href="/api/exportar-csv" class="btn btn-info">📄 Descargar Horario</a>
+                    </div>
+
+                                        <!-- Panel exclusivo cuando entra un PROFESOR / DOCENTE (RF-02 / RD-05) -->
+                    <div id="teacher-panel-box" class="card hidden" style="margin-bottom:18px; border-top:4px solid #c9a227;">
+                        <div class="section-header">
+                            <div class="card-header-clean no-border">
+                                <span class="step-tag">PORTAL DOCENTE </span>
+                                <h2 id="teacher-panel-title">Gestión de Mi Disponibilidad Horaria Semanal</h2>
+                            </div>
+                            <div class="filter-bar">
+                                <label for="select-docente-activo">Profesor en sesión:</label>
+                                <select id="select-docente-activo"></select>
+                            </div>
+                        </div>
+                        <p class="panel-subtitle">Haga clic sobre cualquier bloque horario para <strong>Habilitar (Verde)</strong> o <strong>Bloquear (Rojo)</strong> su disponibilidad en la tabla <code>DISPONIBILIDAD_DOCENTE</code>. Si usted bloquea una franja, el motor impedirá que el Director le asigne clases en ese horario (Regla <code>RD-05</code>).</p>
+                        <div id="teacher-availability-grid" class="chips-container" style="max-height:none; gap:8px;"></div>
+                    </div>
+
+                    <div id="workspace-grid" class="workspace">
+                        <!-- Panel Izquierdo: Formulario de Asignación + Gestión de Estudiantes (Solo Administrador) -->
+                        <div id="admin-left-panel" class="left-panel card">
+                            <div class="card-header-clean">
+                                <span class="step-tag">PASO 01 · ADMINISTRADOR</span>
+                                <h2>Asignación y Gestión de Cupos</h2>
+                            </div>
+                            <p class="panel-subtitle">Seleccione los recursos académicos o arrastre una ficha de grupo hacia la grilla semanal.</p>
+
+                            <div class="form-group">
+                                <label for="select-grupo">1. Seleccionar Grupo (Curso / Inscritos / Tipo)</label>
+                                <select id="select-grupo"></select>
+
+                                <!-- NUEVO MINI-PANEL PARA AÑADIR ESTUDIANTES AL GRUPO SELECCIONADO -->
+                                <div class="enrollment-quick-box">
+                                    <div class="enrollment-header">
+                                        <span>👥 Gestión de Estudiantes en este Grupo:</span>
+                                        <strong id="lbl-cupo-actual">28 / 44 máx.</strong>
+                                    </div>
+                                    <div class="enrollment-controls">
+                                        <button type="button" id="btn-add-1-est" class="btn-enroll" title="Añadir 1 estudiante a esta clase">+1 Est.</button>
+                                        <button type="button" id="btn-add-5-est" class="btn-enroll" title="Añadir 5 estudiantes a esta clase">+5 Est.</button>
+                                        <button type="button" id="btn-sub-1-est" class="btn-enroll btn-enroll-sub" title="Retirar 1 estudiante">-1</button>
+                                        <div class="enroll-direct">
+                                            <input type="number" id="input-inscritos-directo" min="1" max="44" placeholder="Total" />
+                                            <button type="button" id="btn-set-est" class="btn-enroll-set">Fijar</button>
+                                        </div>
+                                    </div>
+                                    <small class="enroll-hint">Tope institucional: 44 est.</small>
+                                </div>
+
+                                <div id="banner-cupo-alerta" class="alert-amber hidden">
+                                    <strong>Alerta Preventiva [RB-01]:</strong> Este grupo tiene una matrícula inferior al umbral mínimo de apertura. Puede <strong>añadir estudiantes arriba</strong> para activarlo o autorizar excepción.
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="select-docente">2. Seleccionar Docente (Vinculación / Tope Horas)</label>
+                                <select id="select-docente"></select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="select-aula">3. Seleccionar Aula Física (Capacidad / Infraestructura)</label>
+                                <select id="select-aula"></select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="select-franja">4. Seleccionar Franja Horaria (Bloques de 2 Horas)</label>
+                                <select id="select-franja"></select>
+                            </div>
+
+                            <div class="action-buttons">
+                                <button id="btn-asignar" class="btn btn-primary">✔ Validar y Registrar Asignación</button>
+                                <div class="btn-row" style="margin-top:8px; gap:8px;">
+                                    <a href="/api/exportar-csv" class="btn btn-info">📄 Exportar a CSV</a>
+                                    <button id="btn-reiniciar-form" class="btn btn-muted">🗑 Reiniciar BD</button>
+                                </div>
+                            </div>
+
+                            <div class="Catalog-groups">
+                                <div class="catalog-header">
+                                    <h3>Fichas Rápidas de Grupos (Drag & Drop)</h3>
+                                    <div class="catalog-legend">
+                                        <span class="legend-item"><i class="dot dot-teo"></i>Teórico</span>
+                                        <span class="legend-item"><i class="dot dot-lab"></i>Laboratorio</span>
+                                        <span class="legend-item"><i class="dot dot-low"></i>Bajo Cupo</span>
+                                    </div>
+                                </div>
+                                <div id="grupos-chips" class="chips-container"></div>
+                            </div>
+                        </div>
+
+                        <!-- Panel Derecho: Grilla Semanal (En modo Estudiante ocupa el 100% del ancho) -->
+                        <div class="right-panel">
+                            <div class="card">
+                                <div class="section-header">
+                                    <div class="card-header-clean no-border">
+                                        <span class="step-tag">GRILLA SEMANAL</span>
+                                        <h2 id="titulo-grilla-semanal">Matriz de Horarios (Bloques Institucionales de 2 Horas)</h2>
+                                    </div>
+                                    <div class="filter-bar">
+                                        <label for="filtro-vista">Filtrar horario por:</label>
+                                        <select id="filtro-vista">
+                                            <option value="TODOS">Todas las Sesiones Programadas</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="timetable-wrapper">
+                                    <table class="timetable" id="grilla-semanal">
+                                        <thead>
+                                            <tr>
+                                                <th>Bloque / Hora</th>
+                                                <th>LUNES</th>
+                                                <th>MARTES</th>
+                                                <th>MIÉRCOLES</th>
+                                                <th>JUEVES</th>
+                                                <th>VIERNES</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="grilla-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     VISTA 2: SESIONES VALIDADAS EN SQLITE 3FN Y EXPORTACIÓN CSV
+                     ========================================================= -->
+                <section id="vista-sesiones" class="app-view hidden">
+                    <div class="card">
+                        <div class="section-header">
+                            <div class="card-header-clean no-border">
+                                <span class="step-tag">PERSISTENCIA SQLITE 3FN</span>
+                                <h2>Listado Oficial de Sesiones de Clase Programadas (ASIGNACION_HORARIO)</h2>
+                            </div>
+                            <div class="btn-row" style="gap:12px;">
+                                <a href="/api/exportar-csv" class="btn btn-info">📄 Exportar Horario</a>
+                                <button id="btn-reiniciar" class="btn btn-muted admin-only-btn">🗑 Reiniciar Asignaciones en BD</button>
+                            </div>
+                        </div>
+                        <p class="panel-subtitle">Cada registro aprobado superó las 5 estrategias polimórficas (<code>IRestriccionStrategy</code>) y está protegido por los candados compuestos <code>UQ_DOCENTE_FRANJA</code>, <code>UQ_AULA_FRANJA</code> y <code>UQ_GRUPO_FRANJA</code>.</p>
+                        <div class="table-scroll" style="max-height: 520px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Grupo</th>
+                                        <th>Código</th>
+                                        <th>Asignatura</th>
+                                        <th>Inscritos</th>
+                                        <th>Docente</th>
+                                        <th>Aula</th>
+                                        <th>Franja Horaria</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-asignaciones"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     VISTA 3: CATÁLOGOS MAESTROS Y GESTIÓN DE MATRÍCULA (3FN)
+                     ========================================================= -->
+                <section id="vista-catalogos" class="app-view hidden">
+                    <div class="card" style="margin-bottom:20px;">
+                        <div class="card-header-clean">
+                            <span class="step-tag">TABLAS CURSO Y GRUPO (1:N) · GESTIÓN DE MATRÍCULA</span>
+                            <h2>Oferta de Asignaturas, Cupo Mínimo y Adición de Estudiantes por Grupo (20 Secciones)</h2>
+                        </div>
+                        <p class="panel-subtitle">Desde esta tabla el Administrador puede <strong>añadir estudiantes (+1 o +5)</strong> o fijar el cupo de cualquier grupo en tiempo real. Si un grupo en <code>ALERTA_CIERRE_POR_CUPO</code> (como <code>GRP-19</code>) alcanza su cupo mínimo, pasa automáticamente a <code>ACTIVO</code>.</p>
+                        <div class="table-scroll" style="max-height: 360px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Grupo</th>
+                                        <th>Código</th>
+                                        <th>Asignatura</th>
+                                        <th>Semestre</th>
+                                        <th>Inscritos Actuales</th>
+                                        <th>Cupo Mínimo</th>
+                                        <th>Tipo</th>
+                                        <th>Estado Regla RB-01</th>
+                                        <th>Acción Administrador (Añadir Estudiantes)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-catalogo-grupos"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="catalogs-grid">
+                        <div class="card">
+                            <div class="card-header-clean">
+                                <span class="step-tag">TABLA DOCENTE + DISPONIBILIDAD</span>
+                                <h2>Catálogo de Docentes Activos (12 Profesores)</h2>
+                            </div>
+                            <div class="table-scroll" style="max-height: 290px;">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Documento</th>
+                                            <th>Nombre Completo</th>
+                                            <th>Vinculación</th>
+                                            <th>Tope Semanal</th>
+                                            <th>Especialidad</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabla-catalogo-docentes"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header-clean">
+                                <span class="step-tag">TABLA AULA</span>
+                                <h2>Inventario de Planta Física (6 Aulas y Laboratorios)</h2>
+                            </div>
+                            <div class="table-scroll" style="max-height: 290px;">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID Aula</th>
+                                            <th>Edificio</th>
+                                            <th>Capacidad Máxima (Aforo)</th>
+                                            <th>Tipo de Infraestructura</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabla-catalogo-aulas"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     VISTA 4: AUDITORÍA QA (CP-01..08), PRUEBA DE ESTRÉS Y CONSOLA
+                     ========================================================= -->
+                <section id="vista-auditoria" class="app-view hidden">
+                    <div class="card console-card">
+                        <div class="section-header">
+                            <div class="card-header-clean no-border">
+                                <span class="step-tag">MÓDULO 03 · VERIFICACIÓN Y PRUEBAS</span>
+                                <h2>Consola de Trazabilidad, Bloqueo de Restricciones y Prueba de Estrés (200 Sesiones)</h2>
+                            </div>
+                            <button id="btn-qa" class="btn btn-secondary">
+                                🧪 Ejecutar Suite QA (CP-01..08) y Prueba Estrés (200)
+                            </button>
+                        </div>
+                        <p class="panel-subtitle">Verificación empírica en tiempo real de las estrategias del patrón <code>Strategy</code> instrumentada con <code>time.perf_counter()</code>.</p>
+                        <pre id="consola-log" style="height: 440px;"></pre>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ESTADO 2: MODAL DE RESOLUCIÓN ASISTIDA DE CONFLICTOS (RESTRICCIÓN DURA - ROJO) -->
+    <div id="modal-conflicto" class="modal-backdrop hidden">
+        <div class="modal-box modal-danger">
+            <div class="modal-header-danger">
+                <div>
+                    <span class="modal-tag">RESTRICCIÓN DURA</span>
+                    <h3>CONFLICTO DETECTADO (BLOQUEO PREVENTIVO)</h3>
+                </div>
+                <button id="btn-cerrar-modal" class="close-btn" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-intro">El <code>MotorAsignacion</code> evaluó las estrategias de <code>IRestriccionStrategy</code> y bloqueó el registro por la(s) siguiente(s) regla(s):</p>
+                <ul id="lista-errores-modal" class="error-list"></ul>
+
+                <div class="assist-box">
+                    <h4>Sugerencia Asistida de Aulas Alternativas Libres y Compatibles (RUI-01)</h4>
+                    <div id="contenedor-alternativas">
+                        <p>Seleccione un salón disponible en la misma franja que cumple el aforo de inscritos y el requerimiento de laboratorio:</p>
+                        <select id="select-aula-alternativa"></select>
+                        <button id="btn-aplicar-alternativa" class="btn btn-primary full-width">Reasignar en Aula Alternativa Sugerida (1 Clic)</button>
+                    </div>
+                    <div id="contenedor-agotado" class="exhausted-box hidden">
+                        <strong>Opciones de aula agotadas en esta franja horaria:</strong> Ningún salón libre cumple simultáneamente el aforo y el tipo de infraestructura. Por favor seleccione otra franja o docente.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ESTADO 3: MODAL DE ALERTA PREVENTIVA POR BAJO CUPO (RESTRICCIÓN BLANDA - ÁMBAR) -->
+    <div id="modal-blanda" class="modal-backdrop hidden">
+        <div class="modal-box modal-amber">
+            <div class="modal-header-amber" style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <span class="modal-tag">RESTRICCIÓN BLANDA [RB-01]</span>
+                    <h3>ALERTA PREVENTIVA DE CIERRE DE GRUPO POR BAJO CUPO</h3>
+                </div>
+                <button id="btn-cerrar-modal-blanda" class="close-btn" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="texto-alerta-blanda" class="amber-detail-text"></p>
+                <p class="modal-question">De acuerdo con la regla de coherencia entre matrícula y apertura de secciones, ¿desea autorizar una <strong>excepción administrativa</strong> para comprometer el aula y programar este grupo?</p>
+                <div class="modal-actions">
+                    <button id="btn-autorizar-cupo" class="btn btn-amber">Autorizar Excepción y Programar</button>
+                    <button id="btn-cancelar-cupo" class="btn btn-muted">Cancelar y Sugerir Cierre/Fusión</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>

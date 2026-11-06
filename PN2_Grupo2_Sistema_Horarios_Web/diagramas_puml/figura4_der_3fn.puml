@@ -1,0 +1,85 @@
+@startuml
+skinparam linetype ortho
+skinparam DefaultTextAlignment left
+title Figura 4. Diagrama Entidad-Relación (DER) Normalizado en Tercera Forma Normal (3FN)
+
+entity "DOCENTE" as Docente {
+  * id_docente : VARCHAR(15) <<PK>>
+  --
+  * documento_identidad : VARCHAR(20) <<UQ>>
+  * nombre_completo : VARCHAR(100)
+  * tipo_vinculacion : VARCHAR(20)
+  * max_horas_semanales : INT
+  * especialidad : VARCHAR(80)
+}
+
+entity "DISPONIBILIDAD_DOCENTE" as DispDocente {
+  * id_disponibilidad : INTEGER <<PK>>
+  --
+  * id_docente : VARCHAR(15) <<FK>>
+  * id_franja : VARCHAR(15) <<FK>>
+  * disponible : BOOLEAN
+}
+
+entity "FRANJA_HORARIA" as Franja {
+  * id_franja : VARCHAR(15) <<PK>>
+  --
+  * dia_semana : VARCHAR(12)
+  * hora_inicio : TIME
+  * hora_fin : TIME
+  * bloque_academico : INT
+}
+
+entity "AULA" as Aula {
+  * id_aula : VARCHAR(15) <<PK>>
+  --
+  * edificio : VARCHAR(40)
+  * capacidad_maxima : INT
+  * es_laboratorio : BOOLEAN
+  * estado_operativo : BOOLEAN
+}
+
+entity "CURSO" as Curso {
+  * id_curso : VARCHAR(15) <<PK>>
+  --
+  * codigo_asignatura : VARCHAR(15) <<UQ>>
+  * nombre_curso : VARCHAR(100)
+  * semestre_plan : INT
+  * creditos : INT
+  * sesiones_semanales : INT
+  * requiere_laboratorio : BOOLEAN
+  * cupo_minimo_apertura : INT
+}
+
+entity "GRUPO" as Grupo {
+  * id_grupo : VARCHAR(15) <<PK>>
+  --
+  * id_curso : VARCHAR(15) <<FK>>
+  * periodo_academico : VARCHAR(10)
+  * numero_seccion : INT
+  * numero_inscritos : INT
+  * estado_grupo : VARCHAR(25)
+}
+
+entity "ASIGNACION_HORARIO" as Asignacion {
+  * id_asignacion : VARCHAR(20) <<PK>>
+  --
+  * id_grupo : VARCHAR(15) <<FK>>
+  * id_docente : VARCHAR(15) <<FK>>
+  * id_aula : VARCHAR(15) <<FK>>
+  * id_franja : VARCHAR(15) <<FK>>
+  * fecha_registro : TIMESTAMP
+  --
+  <<UQ_DOCENTE_FRANJA (id_docente, id_franja)>>
+  <<UQ_AULA_FRANJA (id_aula, id_franja)>>
+  <<UQ_GRUPO_FRANJA (id_grupo, id_franja)>>
+}
+
+Curso ||--o{ Grupo : "abre (1:N)"
+Grupo ||--o{ Asignacion : "programa sesiones (1:N)"
+Docente ||--o{ Asignacion : "imparte (1:N)"
+Aula ||--o{ Asignacion : "alberga (1:N)"
+Franja ||--o{ Asignacion : "ubica en (1:N)"
+Docente ||--o{ DispDocente : "declara (1:N)"
+Franja ||--o{ DispDocente : "delimita (1:N)"
+@enduml

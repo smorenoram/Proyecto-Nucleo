@@ -1,0 +1,58 @@
+@startuml
+autonumber
+skinparam BoxPadding 10
+skinparam responseMessageBelowArrow true
+title Figura 3. Diagrama de Secuencia - Detección de Choque y Sugerencia Asistida de Alternativas
+
+actor "Coordinador Académico" as User
+participant ":VistaGrillaWeb" as UI
+participant ":ControladorAsignacion" as Ctrl
+participant ":MotorAsignacion" as Motor
+participant ":DocenteSinChoqueStrategy" as StratDoc
+participant ":AulaSinChoqueStrategy" as StratAula
+participant ":GestorBDSQLite" as BD
+
+User -> UI: solicitarAsignacion("GRP-07", "DOC-04", "AULA-A101", "LUN-B1")
+activate UI
+UI -> Ctrl: procesar_asignacion("GRP-07", "DOC-04", "AULA-A101", "LUN-B1")
+activate Ctrl
+Ctrl -> Motor: evaluar_asignacion(candidata, asignaciones_activas)
+activate Motor
+
+Motor -> StratDoc: validar(candidata, asignaciones_activas)
+activate StratDoc
+StratDoc --> Motor: ResultadoValidacion(True, "DURA", "RD-01/RD-05", "OK")
+deactivate StratDoc
+
+Motor -> StratAula: validar(candidata, asignaciones_activas)
+activate StratAula
+StratAula --> Motor: ResultadoValidacion(False, "DURA", "RD-02", "Choque de Aula: AULA-A101 ocupada por GRP-03")
+deactivate StratAula
+
+Motor --> Ctrl: lista_resultados (contiene fallo RD-02)
+deactivate Motor
+
+Ctrl -> Ctrl: buscar_aulas_alternativas(GRP-07, LUN-B1)
+note right of Ctrl: Filtra aulas libres en LUN-B1
+con capacidad >= 34 inscritos
+
+Ctrl --> UI: JSON(exito=False, tipo_bloqueo="DURA", errores=[RD-02], alternativas=[AULA-A104, AULA-B201])
+deactivate Ctrl
+
+UI --> User: mostrarModalConflicto(Error RD-02 + Selector con AULA-A104 y AULA-B201)
+User -> UI: clic en "Reasignar en Aula Alternativa Sugerida (AULA-A104)"
+UI -> Ctrl: procesar_asignacion("GRP-07", "DOC-04", "AULA-A104", "LUN-B1")
+activate Ctrl
+Ctrl -> Motor: evaluar_asignacion(candidataCorregida, asignaciones_activas)
+activate Motor
+Motor --> Ctrl: lista_resultados (100% válidas)
+deactivate Motor
+Ctrl -> BD: guardar_asignacion(candidataCorregida)
+activate BD
+BD --> Ctrl: COMMIT OK (UQ_DOCENTE_FRANJA, UQ_AULA_FRANJA, UQ_GRUPO_FRANJA)
+deactivate BD
+Ctrl --> UI: JSON(exito=True, asignacion=ASG-002)
+deactivate Ctrl
+UI --> User: Actualizar Grilla Semanal en color VERDE
+deactivate UI
+@enduml

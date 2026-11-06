@@ -1,0 +1,142 @@
+@startuml
+skinparam packageStyle rectangle
+skinparam linetype ortho
+title Figura 1. Diagrama de Clases UML - Arquitectura en Capas y Patrón Strategy
+
+package "co.edu.bosque.horarios.vista" {
+  class VistaGrillaWebHandler {
+    - controlador: ControladorAsignacion
+    + do_GET(): void
+    + do_POST(): void
+    + solicitarAsignacion(idGrupo: str, idDocente: str, idAula: str, idFranja: str): Dict
+    + mostrarModalConflicto(errores: List<ResultadoValidacion>, alternativas: List<Aula>): void
+  }
+}
+
+package "co.edu.bosque.horarios.controlador" {
+  class ControladorAsignacion {
+    - motor: MotorAsignacion
+    - gestor_bd: GestorBDSQLite
+    - asignaciones_activas: List<AsignacionHorario>
+    + procesar_asignacion(id_grupo: str, id_docente: str, id_aula: str, id_franja: str, autorizar_excepcion_cupo: bool): Dict
+    + buscar_aulas_alternativas(grupo: Grupo, franja: FranjaHoraria): List<Aula>
+    + verificar_estado_apertura_grupo(grupo: Grupo): str
+    + exportar_horario_csv(ruta_archivo: str): int
+    + ejecutar_suite_qa_y_estres(): str
+  }
+}
+
+package "co.edu.bosque.horarios.persistencia" {
+  class GestorBDSQLite {
+    - db_path: str
+    + inicializar_esquema_3fn(): void
+    + cargar_catalogos(): Tuple
+    + guardar_asignacion(asig: AsignacionHorario): void
+    + limpiar_asignaciones(): void
+  }
+}
+
+package "co.edu.bosque.horarios.dominio" {
+  class Docente {
+    - id_docente: str
+    - documento_identidad: str
+    - nombre_completo: str
+    - tipo_vinculacion: str
+    - max_horas_semanales: int
+    - especialidad: str
+    - franjas_disponibles: List<str>
+    + esta_disponible_en(id_franja: str): bool
+    + calcular_horas_asignadas(existentes: List<AsignacionHorario>): int
+  }
+  class Aula {
+    - id_aula: str
+    - edificio: str
+    - capacidad_maxima: int
+    - es_laboratorio: bool
+    - estado_operativo: bool
+    + cumple_capacidad(inscritos: int): bool
+  }
+  class Curso {
+    - id_curso: str
+    - codigo_asignatura: str
+    - nombre_curso: str
+    - semestre_plan: int
+    - creditos: int
+    - sesiones_semanales: int
+    - requiere_laboratorio: bool
+    - cupo_minimo_apertura: int
+  }
+  class Grupo {
+    - id_grupo: str
+    - periodo_academico: str
+    - numero_seccion: int
+    - numero_inscritos: int
+    - estado_grupo: str
+    + cumple_cupo_minimo(): bool
+  }
+  class FranjaHoraria {
+    - id_franja: str
+    - dia_semana: str
+    - hora_inicio: str
+    - hora_fin: str
+    - bloque_academico: int
+    + se_solapa_con(otra: FranjaHoraria): bool
+  }
+  class AsignacionHorario {
+    - id_asignacion: str
+    - estado_validacion: str
+  }
+}
+
+package "co.edu.bosque.horarios.validador" {
+  class ResultadoValidacion {
+    - es_valido: bool
+    - tipo_restriccion: str
+    - codigo_regla: str
+    - mensaje_detalle: str
+    + is_es_valido(): bool
+    + get_mensaje_detalle(): str
+  }
+  interface IRestriccionStrategy {
+    + validar(nueva: AsignacionHorario, existentes: List<AsignacionHorario>): ResultadoValidacion
+  }
+  class MotorAsignacion {
+    - _estrategias: List<IRestriccionStrategy>
+    + registrar_estrategia(estrategia: IRestriccionStrategy): void
+    + evaluar_asignacion(nueva: AsignacionHorario, existentes: List<AsignacionHorario>): List<ResultadoValidacion>
+  }
+  class DocenteSinChoqueStrategy {
+    + validar(nueva: AsignacionHorario, existentes: List<AsignacionHorario>): ResultadoValidacion
+  }
+  class AulaSinChoqueStrategy {
+    + validar(nueva: AsignacionHorario, existentes: List<AsignacionHorario>): ResultadoValidacion
+  }
+  class CapacidadYTipoAulaStrategy {
+    + validar(nueva: AsignacionHorario, existentes: List<AsignacionHorario>): ResultadoValidacion
+  }
+  class UnicidadGrupoEnFranjaStrategy {
+    + validar(nueva: AsignacionHorario, existentes: List<AsignacionHorario>): ResultadoValidacion
+  }
+  class CupoMinimoGrupoStrategy {
+    + validar(nueva: AsignacionHorario, existentes: List<AsignacionHorario>): ResultadoValidacion
+  }
+}
+
+VistaGrillaWebHandler --> ControladorAsignacion : invoca REST >
+ControladorAsignacion *-- MotorAsignacion : compone >
+ControladorAsignacion *-- GestorBDSQLite : persiste en >
+ControladorAsignacion o-- AsignacionHorario : gestiona >
+Curso "1" *-- "1..*" Grupo : contiene >
+AsignacionHorario "*" --> "1" Grupo : asocia >
+AsignacionHorario "*" --> "1" Docente : asigna >
+AsignacionHorario "*" --> "1" Aula : ocupa >
+AsignacionHorario "*" --> "1" FranjaHoraria : programa en >
+MotorAsignacion o-- "1..*" IRestriccionStrategy : ejecuta >
+MotorAsignacion ..> ResultadoValidacion : retorna >
+IRestriccionStrategy ..> AsignacionHorario : inspecciona >
+DocenteSinChoqueStrategy ..|> IRestriccionStrategy
+AulaSinChoqueStrategy ..|> IRestriccionStrategy
+CapacidadYTipoAulaStrategy ..|> IRestriccionStrategy
+UnicidadGrupoEnFranjaStrategy ..|> IRestriccionStrategy
+CupoMinimoGrupoStrategy ..|> IRestriccionStrategy
+@enduml

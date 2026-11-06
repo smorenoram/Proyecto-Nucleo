@@ -1,0 +1,3 @@
+# El proyecto emplea exclusivamente la biblioteca estándar de Python 3:
+# (http.server, sqlite3, dataclasses, abc, csv, json, unittest, webbrowser).
+# No requiere instalar paquetes externos con pip para garantizar portabilidad total en la sustentación.

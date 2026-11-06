@@ -1,0 +1,46 @@
+@startuml
+skinparam DefaultTextAlignment center
+title Figura 2. Diagrama de Actividades - Validación Polimórfica y Resolución Asistida
+
+start
+:Coordinador selecciona o arrastra Grupo, Docente, Aula y FranjaHoraria en la Grilla Web;
+:ControladorAsignacion instancia candidata AsignacionHorario;
+:MotorAsignacion itera sobre la colección de IRestriccionStrategy;
+
+while (¿Quedan estrategias por ejecutar?) is (Sí)
+  :Ejecutar estrategia.validar(nueva, asignaciones_activas);
+  if (¿ResultadoValidacion.es_valido == False?) then (Incumplimiento)
+    :Clasificar fallo según tipo_restriccion (DURA o BLANDA);
+  else (Aprobada)
+  endif
+endwhile (No)
+
+if (¿Existen fallos de Restricción DURA?) then (Sí - Bloqueo Preventivo)
+  :ControladorAsignacion ejecuta buscar_aulas_alternativas(grupo, franja);
+  :Filtrar aulas libres en la franja con capacidad_maxima >= numero_inscritos y laboratorio compatible;
+  if (¿Existen aulas alternativas disponibles?) then (Sí hay opciones)
+    :Desplegar Modal Web de Resolución Asistida con lista de aulas sugeridas;
+    :Coordinador selecciona aula alternativa sugerida en un clic;
+    :Actualizar aula en AsignacionHorario y re-ejecutar validación;
+    :Persistir en SQLite (ASIGNACION_HORARIO) y renderizar celda en VERDE;
+    stop
+  else (No - Recursos agotados en la franja)
+    :Bloquear registro en estado ROJO;
+    :Emitir diagnóstico: "Recursos agotados en la franja seleccionada";
+    :Registrar evento en Consola de Conflictos y solicitar cambio de franja o docente;
+    stop
+  endif
+else (No hay fallos duros)
+  if (¿Existe alerta BLANDA de cierre por bajo cupo RB-01?) then (Sí)
+    :Mostrar Modal Ámbar de Alerta Preventiva (numero_inscritos < cupo_minimo_apertura);
+    if (¿Coordinador autoriza excepción administrativa?) then (No)
+      :Cancelar programación y sugerir cierre o fusión del grupo;
+      stop
+    else (Sí)
+    endif
+  else (No)
+  endif
+  :Persistir en SQLite (ASIGNACION_HORARIO) y renderizar celda en VERDE;
+  stop
+endif
+@enduml
